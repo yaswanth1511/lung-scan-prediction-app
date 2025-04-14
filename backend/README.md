@@ -1,7 +1,7 @@
 
 # TB Detection AI Backend
 
-This is a Python Flask backend that uses PyTorch for TB detection from chest X-ray images.
+This is a Python Flask backend that uses PyTorch for TB detection from chest X-ray images. The application uses a ResNet18 model trained on tuberculosis X-ray dataset.
 
 ## Setup
 
@@ -28,6 +28,10 @@ docker run -p 5000:5000 tb-detection-backend
 
 ## API
 
+### GET /api/health
+
+Health check endpoint.
+
 ### POST /api/predict
 
 Processes an X-ray image and returns a TB prediction.
@@ -49,7 +53,11 @@ Processes an X-ray image and returns a TB prediction.
 
 ## Notes
 
-This implementation uses a pre-trained ResNet50 model. In a production environment, you would:
-1. Fine-tune the model on a TB X-ray dataset
-2. Load the trained weights
-3. Implement proper validation and error handling
+This implementation uses a ResNet18 model pre-trained on ImageNet and fine-tuned for tuberculosis detection. The model processes chest X-ray images to identify signs of tuberculosis.
+
+For production use, consider:
+1. Adding model checkpointing and versioning
+2. Implementing proper logging and monitoring
+3. Adding authentication and rate limiting
+4. Scaling with a production WSGI server like Gunicorn
+
