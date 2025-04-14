@@ -15,6 +15,9 @@ const Index = () => {
   const [confidence, setConfidence] = useState(0);
   const { toast } = useToast();
 
+  // API endpoint
+  const API_URL = 'http://localhost:5000/api/predict';
+
   useEffect(() => {
     if (uploadedImage) {
       const url = URL.createObjectURL(uploadedImage);
@@ -31,28 +34,83 @@ const Index = () => {
     setIsLoading(true);
     setPrediction(null);
     
-    // Simulate the image processing delay
-    setTimeout(() => {
-      processTBPrediction(image);
-    }, 2000);
+    // Process the image with the PyTorch backend
+    processImageWithBackend(image);
   };
 
-  // This function simulates the TB prediction for the demo
-  // In a real app, this would call a backend API with the image
-  const processTBPrediction = (image: File) => {
-    // For this demo, we'll randomly generate a prediction
-    // In a real app, this would be the result from a backend ML model
-    const isTB = Math.random() > 0.6; // 40% chance of TB detection for demo
-    const confidenceScore = 0.7 + (Math.random() * 0.25); // Random confidence between 70-95%
-    
-    setPrediction(isTB ? 'TB Detected' : 'TB Not Detected');
-    setConfidence(confidenceScore);
-    setIsLoading(false);
-    
-    toast({
-      title: "Analysis Complete",
-      description: "The X-ray has been processed successfully.",
+  const processImageWithBackend = async (image: File) => {
+    try {
+      // Convert the image to base64
+      const base64Image = await fileToBase64(image);
+      
+      // Send the image to the backend
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: base64Image }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Update the UI with the results
+      setPrediction(data.prediction);
+      setConfidence(data.confidence);
+      setIsLoading(false);
+      
+      toast({
+        title: "Analysis Complete",
+        description: "The X-ray has been processed by the AI model.",
+      });
+    } catch (error) {
+      console.error('Error processing image:', error);
+      setIsLoading(false);
+      
+      toast({
+        title: "Error",
+        description: "Failed to process the image. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Fallback to the simulated prediction for development
+      fallbackToPredictionSimulation(image);
+    }
+  };
+  
+  // Utility function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
     });
+  };
+  
+  // Fallback simulation for development when backend is not available
+  const fallbackToPredictionSimulation = (image: File) => {
+    console.warn('Using fallback prediction simulation');
+    
+    setTimeout(() => {
+      // Get a somewhat consistent result based on the image name
+      const nameSum = image.name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      const isTB = (nameSum % 10) > 6; // Use filename to get consistent results
+      const confidenceScore = 0.7 + ((nameSum % 100) / 400); // 70-95% confidence
+      
+      setPrediction(isTB ? 'TB Detected' : 'TB Not Detected');
+      setConfidence(confidenceScore);
+      setIsLoading(false);
+      
+      toast({
+        title: "Analysis Complete (Simulated)",
+        description: "The X-ray has been processed with the fallback simulation.",
+      });
+    }, 2000);
   };
 
   return (
